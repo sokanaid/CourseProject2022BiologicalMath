@@ -9,3 +9,6 @@ run_simulation.R - содержит код исполнения симуляци
  
 #### репозиторий научной группы с кодом запуска симуляций - https://github.com/YegorGalkin/RcppSim
 #### папка с результатами симуляций - https://drive.google.com/drive/u/1/folders/17URsRm9K5kYYqHnyPldIftXDf_RzqF-4
+
+## Ссылки
+Применять скользящее среднее нельзя так как нет данных из будущего https://www.fsight.ru/blog/metody-analiza-vremennyh-rjadov-sglazhivanie/
