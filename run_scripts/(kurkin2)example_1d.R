@@ -14,7 +14,7 @@ print(sd[[1]])
 b<-0.2
 death_r<-0.02
 #auto_stop_at_plateau<-TRUE
-epochs_count = 4000
+epochs_count <- 4000 
 plateau_threshold<-8
 area_length_x<-100
 initial_pop <- 10
