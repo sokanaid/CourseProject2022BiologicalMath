@@ -13,68 +13,80 @@
 #'
 #' @examples
 run_simulation<-
-  function(simulator, epochs, calculate.pcf=FALSE, pcf_grid, auto_stop_at_plateau = TRUE, plateau_threshold = 0.8) {
+  function(simulator, epochs, calculate.pcf=FALSE, pcf_grid, auto_stop_at_plateau = TRUE, plateau_threshold = 10) {
   require(dplyr)
   time<-numeric(epochs+1)
   pop<-numeric(epochs+1)
+  exp_pop<-rep(list(numeric(epochs+1)), each = 10)
   realtime_limit_reached<-FALSE
   
   pop[1] = simulator$total_population
+  for(i in 1:length(exp_pop)) {
+    exp_pop[i][1] = pop[1]
+  }
   time[1] = simulator$time
-  # 1. определить длительность отрезка здесь придется выбирать шаг не зависимо от симуляции (т к заранее не понятно сколько она продлится)
-  # 2. убрать выбросы если нужно
-  # 3. сравнивать отрезки
   
-  # choose sizes of windows indenendetly on simulation len (because it is not known before the end of simulation)
   simulation_windows_sizes<-c(max(numeric(epochs+1) %/% 5, 1000),
    max(numeric(epochs + 1) %/% 10, 500))
-  # TODO: проверить что здесь действительно правильно запоняетмся массив
-  last_windows<-c(c(pop[1]), c(pop[1]), c(pop[1]))
-  windows_mean<-c(list(), list(), list())
-  windows_var<-c(list(), list(), list())
-  windows_var<-c(-1,-1, -1)
+  last_windows<-c(list(pop[1]), list(pop[1]))
+  windows_var<-list(list(), list())
+  alpha = 0.25 # константа экспаненциального сглаживания
   found_plateau = FALSE
+  print("epochs")
+  print(epochs)
+  print(simulation_windows_sizes)
+  print("simulation_windows_sizes")
   for(j in 2:(epochs + 1)){
+    
     simulator$run_events(simulator$total_population)
     pop[j]=simulator$total_population
+    time[j]=simulator$time
+    for(i in 1:length(exp_pop)) {
+      if(i==1){
+        exp_pop[[i]][j] =  exp_pop[[i]][j-1]*(1-alpha) + pop[j]*alpha
+      }
+      else{
+        exp_pop[[i]][j] = exp_pop[[i]][j-1]*(1-alpha) + exp_pop[[i-1]][j]*alpha
+      }
+    }
     if(auto_stop_at_plateau){
       # check the plateau
-      for(window_size_ind in length(simulation_windows_sizes)){
-        if(j %% simulation_windows_sizes[window_size_ind]==0){
-          # full window
-          # check plateou issue
-
-          # TODO: здесь еще нужно выкинуть 5% максимумов и минимумов из последовательности
-          mean_val<-mean(last_windows[window_size_ind])
-          var_val<-var(last_windows[window_size_ind])
-          windows_mean[window_size_ind]<-c(windows_mean[window_size_ind], mean_val)
-          windows_var[window_size_ind]<-c(windows_var[window_size_ind], mean_val)
-          if(mean_val<0.00000001) {
-            # to escape zero division
-            mean_val<-0.00000001
-          }
+      for(window_size_ind in seq(1,length(simulation_windows_sizes))){
+        if(j %% simulation_windows_sizes[[window_size_ind]]==0){
+          var_val<-var(last_windows[[window_size_ind]])
+          
+          windows_var[[window_size_ind]]<-c(windows_var[[window_size_ind]], var_val)
           if(var_val<0.00000001) {
             # to escape zero division
             var_val<-0.00000001
           }
-          prev_ind<-length(windows_mean[window_size_ind])-2
-          if(prev_ind>=0 && abs(windows_mean[window_size_ind][prev_ind]/mean_val) > 0.8) {
-              if(prev_ind>20) {
-                prev_ind<- prev_ind-1
-              }
-              # ищем максимум из res
-              # но так как пытаемся определить в realtime посмотрим на предыдущий и если текущий значительно меньше, то примем предыдущий за выход на плато
-              res[window_size_ind]<-windows_var[window_size_ind][prev_ind]/var_val
-          } else if(res[window_size_ind]!=-1 && res[window_size_ind] > windows_var[window_size_ind][prev_ind]/var_val) {
-            # предыдущий отрезок был выходом на плато
+          prev_ind<-length(windows_var[[window_size_ind]])-1
+          if(prev_ind>20) {
+              prev_ind<- prev_ind-1
+          }
+          if(prev_ind >=1 && (windows_var[[window_size_ind]][[prev_ind]]/var_val > plateau_threshold || windows_var[[window_size_ind]][[prev_ind]]/var_val < 1/plateau_threshold)){ # 2 участка плато
+            print("windows_var[[window_size_ind]][[prev_ind]]/var_val")
+            print(windows_var[[window_size_ind]][[prev_ind]]/var_val)
+            print("at plateuo")
             found_plateau = TRUE
             break
           }
-          last_windows[window_size_ind]<-list()
+          # ищем максимум из res
+          # но так как пытаемся определить в realtime посмотрим на предыдущий и если текущий значительно меньше, то примем предыдущий за выход на плато
+          if(prev_ind >= 1) {
+            print("windows_var[[window_size_ind]][[prev_ind]]/var_val")
+            print(windows_var[[window_size_ind]][[prev_ind]]/var_val)
+          }
+          last_windows[[window_size_ind]]<-exp_pop[[length(exp_pop)]][j]
+          print("-")
         }
         else{
-          last_windows[window_size_ind]<-c(last_windows[window_size_ind], pop[j])
+          last_windows[[window_size_ind]]<-c(last_windows[[window_size_ind]], exp_pop[[length(exp_pop)]][j])
         }
+        
+      }
+      if(found_plateau) {
+        break
       }
     }
 
@@ -101,7 +113,17 @@ run_simulation<-
   result <- list('realtime_limit_reached' = simulator$realtime_limit_reached,
                  'population' = data.frame(time=time,pop=pop)%>%distinct(),
                  'pattern' = pattern,
-                 "found_plateau" = found_plateau)
+                 "found_plateau" = found_plateau,
+                 "exp_pop"=data.frame(time=time[1:length(exp_pop[[1]])],exp_pop=exp_pop[[1]])%>%distinct(), 
+                 "exp_pop2"=data.frame(time=time[1:length(exp_pop[[1]])],exp_pop2=exp_pop[[2]])%>%distinct(),
+                 "exp_pop3"=data.frame(time=time[1:length(exp_pop[[1]])],exp_pop3=exp_pop[[3]])%>%distinct(),
+                 "exp_pop4"=data.frame(time=time[1:length(exp_pop[[1]])],exp_pop4=exp_pop[[4]])%>%distinct(),
+                 "exp_pop5"=data.frame(time=time[1:length(exp_pop[[1]])],exp_pop5=exp_pop[[5]])%>%distinct(),
+                 "exp_pop5"=data.frame(time=time[1:length(exp_pop[[1]])],exp_pop6=exp_pop[[6]])%>%distinct(),
+                 "exp_pop5"=data.frame(time=time[1:length(exp_pop[[1]])],exp_pop7=exp_pop[[7]])%>%distinct(),
+                 "exp_pop5"=data.frame(time=time[1:length(exp_pop[[1]])],exp_pop8=exp_pop[[8]])%>%distinct(),
+                 "exp_pop5"=data.frame(time=time[1:length(exp_pop[[1]])],exp_pop9=exp_pop[[9]])%>%distinct(),
+                 "exp_pop10"=data.frame(time=time[1:length(exp_pop[[1]])],exp_pop10=exp_pop[[10]])%>%distinct())
   
   if (calculate.pcf){
     require(spatstat)
