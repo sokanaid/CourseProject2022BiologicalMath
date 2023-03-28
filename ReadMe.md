@@ -11,4 +11,5 @@ run_simulation.R - содержит код исполнения симуляци
 #### папка с результатами симуляций - https://drive.google.com/drive/u/1/folders/17URsRm9K5kYYqHnyPldIftXDf_RzqF-4
 
 ## Ссылки
-Применять скользящее среднее нельзя так как нет данных из будущего https://www.fsight.ru/blog/metody-analiza-vremennyh-rjadov-sglazhivanie/
+Применять скользящее среднее не удобно так как нужно подбирать размер окна  https://www.fsight.ru/blog/metody-analiza-vremennyh-rjadov-sglazhivanie/
+https://habr.com/ru/company/ods/blog/327242/
