@@ -64,7 +64,7 @@ def read_all_simulations(directories_paths):
 
 def add_sim(data_frame, sim):
     params = sim["params"]
-    mean_pop = sim["population"].tail(100)['pop'].mean()
+    mean_pop = sim["exp_pop10"].tail(100)['exp_pop2'].mean()
     d = params['d'] if 'd' in params else 0
     new_row = pd.Series(
         {'b': params['b'], 'd': d, 'death_r': params['death_r'], 'dd': params['dd'], 'sd_b': params['sd_b'],
