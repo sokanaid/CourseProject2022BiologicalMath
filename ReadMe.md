@@ -9,9 +9,12 @@ run_simulation.R - содержит код исполнения симуляци
  
 generate_dataset.py - скрипт формирования датасета.
 
+data_smoothing.ipynb - блокнот подбора метода сглаживания для симуляций
+
+find_plateau_threshold.ipynb - блокнот подбора параметров алгоритма остановки на плато: размера временного отрезка и порога
+
+plateau_search_results.ipynb - блокнот проверки результатов работы алгоритма остановки на плато
+
 #### репозиторий научной группы с кодом запуска симуляций - https://github.com/YegorGalkin/RcppSim
 #### папка с результатами симуляций - https://drive.google.com/drive/u/1/folders/17URsRm9K5kYYqHnyPldIftXDf_RzqF-4
 
-## Ссылки
-Применять скользящее среднее не удобно так как нужно подбирать размер окна  https://www.fsight.ru/blog/metody-analiza-vremennyh-rjadov-sglazhivanie/
-https://habr.com/ru/company/ods/blog/327242/
